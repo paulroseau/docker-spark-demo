@@ -11,18 +11,12 @@ a docker container using [sbt-native-packager](https://github.com/sbt/sbt-native
 
 ## Steps
 
-1. Build the base image
-```
-cd base-image
-docker build -t test/spark-submit .
-```
-
-2. Package your application within a docker container
+1. Package your application within a docker container
 ```
 sbt docker:publishLocal
 ```
 
-3. Run your job
+2. Run your job
 
  - locally : 
 ```

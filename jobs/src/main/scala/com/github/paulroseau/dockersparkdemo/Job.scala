@@ -1,6 +1,6 @@
 package com.github.paulroseau.dockersparkdemo
 
-import org.apache.spark.{SparkConf, SparkContext}
+import org.apache.spark.{ SparkConf, SparkContext }
 
 object Job {
   def main(args: Array[String]): Unit = {

@@ -108,6 +108,7 @@ lazy val allSettings =
 
 lazy val D = new {
   val Versions = new {
+    val hadoop = "2.7"
     val spark = "2.2.1"
   }
   val spark = "org.apache.spark" %% "spark-core" % Versions.spark % "provided"
@@ -134,19 +135,33 @@ lazy val jobs =
     .settings(allSettings)
     .settings(
       Seq(
-        dockerBaseImage := "test/spark-submit",
         packageName in Docker := name.value,
         version in Docker := version.value,
-        mappings in Universal := Seq(
+        mappings in Docker := Seq(
           (assembly in Compile map { jar ⇒
-            jar → s"docker-spark-demo-assembly.jar"
+            jar → s"/opt/jars/docker-spark-demo-assembly.jar"
           }).value
         ),
-        defaultLinuxInstallLocation in Docker := "/opt/jars",
-        dockerCommands in Docker := (dockerCommands in Docker).value filterNot {
-          case ExecCmd("ENTRYPOINT", _) ⇒ true
-          case Cmd("ENTRYPOINT", _)     ⇒ true
-          case _                        ⇒ false
+        mappings in Docker ++= {
+          val baseDir = (target in Docker).value
+          Seq((dockerGenerateConfig in Docker).value) pair (file ⇒ IO.relativize(baseDir, file))
+        },
+        dockerCommands in Docker := {
+          Seq(
+            Cmd("FROM", "openjdk:latest"),
+            Cmd("ENV", s"SPARK_VERSION=${D.Versions.spark}"),
+            Cmd("ENV", s"HADOOP_VERSION=${D.Versions.hadoop}"),
+            Cmd(
+              "RUN",
+              "wget http://apache.mirror.iphh.net/spark/spark-${SPARK_VERSION}/spark-${SPARK_VERSION}-bin-hadoop${HADOOP_VERSION}.tgz",
+              " && tar -xvzf spark-${SPARK_VERSION}-bin-hadoop${HADOOP_VERSION}.tgz",
+              " && mv spark-${SPARK_VERSION}-bin-hadoop${HADOOP_VERSION} /opt",
+              " && rm spark-${SPARK_VERSION}-bin-hadoop${HADOOP_VERSION}.tgz",
+              " && ln -s /opt/spark-${SPARK_VERSION}-bin-hadoop${HADOOP_VERSION} /opt/spark"
+            ),
+            Cmd("ADD", "opt/jars", "/opt/jars"),
+            Cmd("ENTRYPOINT", """["/opt/spark/bin/spark-submit"]""")
+          )
         }
       )
     )
